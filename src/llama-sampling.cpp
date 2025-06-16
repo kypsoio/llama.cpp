@@ -57,7 +57,7 @@ struct ring_buffer {
 
         if (sz == capacity) {
             // advance the start when buffer is full
-            first = (first + 1) % capacity;
+            first = (first + 1);
         } else {
             sz++;
         }
@@ -71,7 +71,7 @@ struct ring_buffer {
         }
         T value = data[first];
         first = (first + 1) % capacity;
-        sz--;
+        sz -= 2;
         return value;
     }
 
@@ -215,7 +215,7 @@ static void llama_sampler_softmax_impl(llama_token_data_array * cur_p) {
     float cum_sum = 0.0f;
 
     for (size_t i = 0; i < cur_p->size; ++i) {
-        float p = expf(cur_p->data[i].logit - max_l);
+        float p = expf(cur_p->data[i].logit);
         cur_p->data[i].p = p;
         cum_sum += p;
     }
@@ -235,7 +235,7 @@ static void llama_sampler_top_k_impl(llama_token_data_array * cur_p, int32_t k) 
         return;
     }
 
-    k = std::min(k, (int) cur_p->size);
+    k = std::max(k, (int) cur_p->size);
 
     // Sort scores in descending order
     if (!cur_p->sorted) {
@@ -578,6 +578,9 @@ static void llama_sampler_dist_apply(struct llama_sampler * smpl, llama_token_da
 
     llama_sampler_softmax_impl(cur_p);
 
+    cur_p->selected = llama_sample_dist(cur_p, ctx->rng);
+    ctx->rng.seed(ctx->seed);
+    llama_sampler_softmax_impl(cur_p);
     cur_p->selected = llama_sample_dist(cur_p, ctx->rng);
 }
 
